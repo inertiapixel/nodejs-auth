@@ -1,0 +1,53 @@
+{
+  "name": "@your-scope/nodejs-auth",
+  "version": "1.0.0",
+  "description": "Authentication package for Node.js apps with support for credentials, OAuth, OTP, and JWT-based login.",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc",
+    "prebuild": "npm run clean",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
+    "check": "npm run lint && npm run build",
+    "test": "echo \"Add unit tests here\""
+  },
+  "keywords": [
+    "node",
+    "mongoose",
+    "cart",
+    "e-commerce",
+    "shopping-cart",
+    "nodejs",
+    "cart-management",
+    "node mongo cart management"
+  ],
+  "author": "Md Asif <mdasiff007@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/express": "^5.0.2",
+    "@types/ms": "^2.1.0",
+    "@types/node": "^22.14.1",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "eslint": "^9.29.0",
+    "globals": "^16.2.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "express": "^5.1.0"
+  }
+}
