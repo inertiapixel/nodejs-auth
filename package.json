@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "files": [
     "dist"
   ],
@@ -39,6 +40,7 @@
   "devDependencies": {
     "@eslint/js": "^9.29.0",
     "@types/bcryptjs": "^3.0.0",
+    "@types/express": "^5.1.0",
     "@types/ms": "^2.1.0",
     "@types/node": "^22.14.1",
     "@typescript-eslint/eslint-plugin": "^8.33.1",
