@@ -1,5 +1,4 @@
 import { RequestHandler } from 'express';
-import axios from 'axios';
 import jwt from 'jsonwebtoken';
 
 import { generateToken } from '../../utils/token';
@@ -7,7 +6,6 @@ import { getSocialConfig } from '../../config/social';
 import { getClientBaseUrl } from '../../config/client';
 import { getUserHandler } from '../../config/user';
 import { cleanUrl } from '../../utils/common';
-// import { I_SocialUser } from '../../types/auth';
 
 import {
   runOAuthSuccessHook,
@@ -17,7 +15,7 @@ import {
   runMapProfileToUserHook,
   runTransformUserHook
 } from '../../hooks';
-import { I_Profile } from 'pkj/src/types/auth';
+import { I_Profile } from '../../types/auth';
 
 interface GoogleIdTokenPayload {
   given_name: string;
@@ -32,11 +30,12 @@ export const googleAuth: RequestHandler = async (req, res) => {
   const { code } = req.body;
 
   if (!code) {
-    return res.status(400).json({
+    res.status(400).json({
       provider: 'google',
       isAuthenticated: false,
       message: 'Authorization code is missing',
     });
+    return;
   }
 
   const config = getSocialConfig().google;
@@ -44,44 +43,60 @@ export const googleAuth: RequestHandler = async (req, res) => {
   const redirectUrl = cleanUrl(`${baseUrl}/api/auth/google`);
 
   if (!config?.clientId || !config?.clientSecret || !config?.redirectUri) {
-    return res.status(400).json({
+    res.status(400).json({
       provider: 'google',
       isAuthenticated: false,
       message: 'Google OAuth configuration missing',
     });
+    return;
   }
 
   try {
     // 1. Exchange code for token
-    const tokenRes = await axios.post(
-      'https://oauth2.googleapis.com/token',
-      new URLSearchParams({
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
         code,
         client_id: config.clientId,
         client_secret: config.clientSecret,
         redirect_uri: redirectUrl,
         grant_type: 'authorization_code',
       }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
+    });
 
-    const { id_token } = tokenRes.data;
+    if (!tokenRes.ok) {
+      throw new Error('Failed to fetch Google token');
+    }
+
+    const tokenData = await tokenRes.json();
+    if (!tokenData || typeof tokenData !== 'object' || !('id_token' in tokenData)) {
+       res.status(400).json({
+        provider: 'google',
+        isAuthenticated: false,
+        message: 'ID token not found in response',
+      });
+      return;
+    }
+    
+    const { id_token } = tokenData as { id_token: string };
+
     const decoded = jwt.decode(id_token) as GoogleIdTokenPayload | null;
 
     if (!decoded?.email) {
-      return res.status(400).json({
+      res.status(400).json({
         provider: 'google',
         isAuthenticated: false,
         message: 'Invalid ID token',
       });
+      return;
     }
 
-    // 2. Map raw profile to user structure via hook
+    // 2. Map profile using hook
     let userData = await runMapProfileToUserHook({
       profile: decoded as I_Profile,
       provider: 'google',
     });
-
 
     if (!userData) {
       const { name, email, picture: avatar } = decoded;
@@ -93,14 +108,15 @@ export const googleAuth: RequestHandler = async (req, res) => {
     let user = await getUser(userData);
 
     if (!user || typeof user !== 'object') {
-      return res.status(500).json({
+      res.status(500).json({
         provider: 'google',
         isAuthenticated: false,
         message: 'User creation or fetch failed',
       });
+      return;
     }
 
-    // 4. Optional transform of final user object
+    // 4. Transform if needed
     user = await runTransformUserHook(user);
 
     // 5. Issue JWT
@@ -114,8 +130,8 @@ export const googleAuth: RequestHandler = async (req, res) => {
     await runOAuthSuccessHook({ user, provider: 'google', accessToken, rawProfile: decoded });
     await runTokenIssuedHook({ user, provider: 'google', accessToken, rawProfile: decoded });
 
-    // 7. Return to frontend
-    return res.status(200).json({
+    // 7. Return
+    res.status(200).json({
       isAuthenticated: true,
       provider: 'google',
       accessToken,
@@ -123,6 +139,7 @@ export const googleAuth: RequestHandler = async (req, res) => {
       provoider_log: decoded,
       message: 'Login successful. Happy shopping!',
     });
+    return;
   } catch (error) {
     await runOAuthErrorHook({
       provider: 'google',
@@ -137,11 +154,12 @@ export const googleAuth: RequestHandler = async (req, res) => {
       requestBody: req.body,
     });
 
-    return res.status(500).json({
+    res.status(500).json({
       provider: 'google',
       isAuthenticated: false,
       message: 'Failed to login using Google',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
+    return;
   }
 };

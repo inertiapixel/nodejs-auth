@@ -9,6 +9,7 @@ import { setUserHandler } from './config/user';
 import { setHooks } from './hooks';
 
 import type {
+  I_LoginSuccess,
   I_AuthHooks,
   SocialConfig,
   I_SocialUser,
@@ -18,7 +19,6 @@ import type {
   I_OAuthSuccess,
   I_TokenError,
   I_TokenIssued,
-
   I_Logout,
   I_TokenBlacklisted,
   I_TokenRefresh,
@@ -27,7 +27,10 @@ import type {
   I_MapProfileToUser
 } from './types/auth';
 
+// Correct import for Express 5–safe handler type
 import type { RequestHandler } from 'express';
+
+type Handler = RequestHandler;
 
 interface AuthConfig extends SocialConfig {
   jwtSecret: string;
@@ -38,15 +41,15 @@ interface AuthConfig extends SocialConfig {
 
 interface InertiaAuthReturn {
   auth: {
-    login: RequestHandler;
-    logout: RequestHandler;
-    refreshToken?: RequestHandler;
-    google?: RequestHandler;
-    facebook?: RequestHandler;
-    linkedin?: RequestHandler;
+    login: Handler;
+    logout: Handler;
+    refreshToken?: Handler;
+    google?: Handler;
+    facebook?: Handler;
+    linkedin?: Handler;
   };
   middleware: {
-    authenticate: RequestHandler;
+    authenticate: Handler;
   };
 }
 
@@ -70,11 +73,13 @@ const inertiaAuth = (config: AuthConfig): InertiaAuthReturn => {
   setUserHandler(userHandler);
   setSocialConfig({ google, facebook, linkedin });
 
-  if (hooks) {
-    setHooks(hooks); // register developer-provided hooks
-  }
+  if (hooks) setHooks(hooks);
 
-  const { google: googleHandler, facebook: facebookHandler, linkedin: linkedinHandler } = getSocialAuthHandlers();
+  const {
+    google: googleHandler,
+    facebook: facebookHandler,
+    linkedin: linkedinHandler
+  } = getSocialAuthHandlers();
 
   return {
     auth: {
@@ -83,33 +88,31 @@ const inertiaAuth = (config: AuthConfig): InertiaAuthReturn => {
       refreshToken,
       google: googleHandler,
       facebook: facebookHandler,
-      linkedin: linkedinHandler,
+      linkedin: linkedinHandler
     },
     middleware: {
-      authenticate,
-    },
+      authenticate
+    }
   };
 };
 
 export default inertiaAuth;
 
-// Re-export types for convenience
+// Re-export types
 export type {
   I_SocialUser,
   I_UserObject,
-
+  I_LoginSuccess,
   I_AuthHooks,
   I_LoginError,
   I_OAuthError,
   I_OAuthSuccess,
   I_TokenError,
   I_TokenIssued,
-
   I_Logout,
   I_TokenBlacklisted,
   I_TokenRefresh,
   I_SessionTimeout,
-
   I_Profile,
   I_MapProfileToUser
 };

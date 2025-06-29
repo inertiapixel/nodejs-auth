@@ -1,6 +1,4 @@
 import { RequestHandler } from 'express';
-import axios from 'axios';
-
 import { generateToken } from '../../utils/token';
 import { getSocialConfig } from '../../config/social';
 import { getClientBaseUrl } from '../../config/client';
@@ -26,55 +24,75 @@ export const linkedinAuth: RequestHandler = async (req, res) => {
   const redirectUrl = cleanUrl(`${clientBaseUrl}/api/auth/linkedin`);
 
   if (!config?.clientId || !config?.clientSecret || !config?.redirectUri) {
-    return res.status(400).json({
+     res.status(400).json({
       provider: 'linkedin',
       isAuthenticated: false,
       message: 'LinkedIn OAuth configuration missing',
     });
+    return;
   }
 
   try {
-    // Step 1: Exchange code for access token
-    const tokenRes = await axios.post(
-      'https://www.linkedin.com/oauth/v2/accessToken',
-      new URLSearchParams({
+    // 1. Exchange code for access token
+    const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
         redirect_uri: redirectUrl,
         client_id: config.clientId,
         client_secret: config.clientSecret,
       }),
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      }
-    );
+    });
 
-    const access_token = tokenRes.data.access_token;
+    if (!tokenResponse.ok) throw new Error('Failed to obtain LinkedIn access token');
+    const tokenJson = await tokenResponse.json();
+   
+    if (!tokenJson || typeof tokenJson !== 'object' || !('access_token' in tokenJson)) {
+      res.status(400).json({
+        provider: 'linkedin',
+        isAuthenticated: false,
+        message: 'Access token not found in LinkedIn response',
+      });
+      return;
+    }
+    
+    const { access_token } = tokenJson as { access_token: string };
 
     if (!access_token) {
-      return res.status(400).json({
+       res.status(400).json({
         provider: 'linkedin',
         isAuthenticated: false,
         message: 'No access token received from LinkedIn',
       });
+      return;
     }
 
-    // Step 2: Fetch user profile from LinkedIn
-    const profileRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
+    // 2. Fetch user profile
+    const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
 
-    const profile = profileRes.data;
+    if (!profileRes.ok) throw new Error('Failed to fetch LinkedIn user profile');
+    
+    const profile = await profileRes.json() as {
+      sub: string;
+      name: string;
+      email: string;
+      picture?: string;
+    };
 
     if (!profile.email) {
-      return res.status(400).json({
+       res.status(400).json({
         provider: 'linkedin',
         isAuthenticated: false,
         message: 'Email is required but missing from LinkedIn response',
       });
+      return;
     }
 
-    // Step 3: Normalize profile using mapProfileToUser hook
+    // 3. Normalize profile
     const mappedProfile: I_Profile = {
       sub: profile.sub,
       name: profile.name,
@@ -96,29 +114,30 @@ export const linkedinAuth: RequestHandler = async (req, res) => {
       };
     }
 
-    // Step 4: Create or fetch user
+    // 4. Get or create user
     const getUser = getUserHandler();
     let user = await getUser(userData);
 
     if (!user || typeof user !== 'object') {
-      return res.status(500).json({
+       res.status(500).json({
         provider: 'linkedin',
         isAuthenticated: false,
         message: 'User creation or fetch failed',
       });
+      return;
     }
 
-    // Step 5: Optionally transform user
+    // 5. Optional transform
     user = await runTransformUserHook(user);
 
-    // Step 6: Generate app JWT token
+    // 6. Issue token
     const appToken = generateToken({
       name: user.name || userData.name,
       email: user.email || userData.email,
       avatar: user.avatar || userData.avatar,
     });
 
-    // Step 7: Run hooks
+    // 7. Run hooks
     await runOAuthSuccessHook({
       user,
       provider: 'linkedin',
@@ -139,8 +158,8 @@ export const linkedinAuth: RequestHandler = async (req, res) => {
       accessToken: appToken,
     });
 
-    // Step 8: Return response
-    return res.status(200).json({
+    // 8. Final response
+     res.status(200).json({
       isAuthenticated: true,
       provider: 'linkedin',
       accessToken: appToken,
@@ -148,6 +167,7 @@ export const linkedinAuth: RequestHandler = async (req, res) => {
       provoider_log: mappedProfile,
       message: 'Login successful via LinkedIn!',
     });
+    return;
   } catch (err) {
     await runOAuthErrorHook({
       provider: 'linkedin',
@@ -162,11 +182,12 @@ export const linkedinAuth: RequestHandler = async (req, res) => {
       requestBody: req.body,
     });
 
-    return res.status(500).json({
+     res.status(500).json({
       provider: 'linkedin',
       isAuthenticated: false,
       message: 'Failed to login using LinkedIn',
       error: err instanceof Error ? err.message : 'Unknown error',
     });
+    return;
   }
 };

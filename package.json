@@ -1,11 +1,13 @@
 {
   "name": "@inertiapixel/nodejs-auth",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Authentication system for Node.js and Express. Supports credentials and social login, JWT token management, and lifecycle hooks — designed to integrate with nextjs-auth for full-stack MERN apps.",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -37,7 +39,6 @@
   "devDependencies": {
     "@eslint/js": "^9.29.0",
     "@types/bcryptjs": "^3.0.0",
-    "@types/express": "^5.0.2",
     "@types/ms": "^2.1.0",
     "@types/node": "^22.14.1",
     "@typescript-eslint/eslint-plugin": "^8.33.1",
@@ -49,5 +50,9 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "express": "^5.1.0"
+  },
+  "peerDependencies": {
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.0"
   }
 }

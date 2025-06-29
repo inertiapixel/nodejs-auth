@@ -1,5 +1,4 @@
 import { RequestHandler } from 'express';
-import axios from 'axios';
 import { generateToken } from '../../utils/token';
 import { getSocialConfig } from '../../config/social';
 import { getClientBaseUrl } from '../../config/client';
@@ -28,6 +27,12 @@ interface FacebookUser {
   };
 }
 
+interface FacebookTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
 export const facebookAuth: RequestHandler = async (req, res) => {
   const { code } = req.body;
 
@@ -36,53 +41,55 @@ export const facebookAuth: RequestHandler = async (req, res) => {
   const redirectUrl = cleanUrl(`${clientBaseUrl}/api/auth/facebook`);
 
   if (!config?.clientId || !config?.clientSecret || !config?.redirectUri) {
-    return res.status(400).json({
+    res.status(400).json({
       provider: 'facebook',
       isAuthenticated: false,
       message: 'Facebook OAuth configuration missing',
     });
+    return;
   }
 
   try {
-    // Step 1: Exchange code for access token
-    const tokenRes = await axios.get('https://graph.facebook.com/v18.0/oauth/access_token', {
-      params: {
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        redirect_uri: redirectUrl,
-        code,
-      },
-    });
+    // 1. Exchange code for access token
+    const tokenRes = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?` + new URLSearchParams({
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      redirect_uri: redirectUrl,
+      code,
+    }));
 
-    const { access_token } = tokenRes.data;
+    if (!tokenRes.ok) throw new Error('Failed to obtain Facebook access token');
+    const tokenJson = await tokenRes.json() as FacebookTokenResponse;
+    const access_token = tokenJson.access_token;
 
     if (!access_token) {
-      return res.status(400).json({
+       res.status(400).json({
         provider: 'facebook',
         isAuthenticated: false,
-        message: 'Failed to obtain access token',
+        message: 'No access token received from Facebook',
       });
+      return;
     }
 
-    // Step 2: Fetch user info from Facebook
-    const userRes = await axios.get<FacebookUser>('https://graph.facebook.com/me', {
-      params: {
-        fields: 'id,name,email,picture',
-        access_token,
-      },
-    });
+    // 2. Fetch user profile
+    const userRes = await fetch(`https://graph.facebook.com/me?` + new URLSearchParams({
+      fields: 'id,name,email,picture',
+      access_token,
+    }));
 
-    const fbProfile = userRes.data;
+    if (!userRes.ok) throw new Error('Failed to fetch Facebook user profile');
+    const fbProfile = await userRes.json() as FacebookUser;
 
     if (!fbProfile.email) {
-      return res.status(400).json({
+       res.status(400).json({
         provider: 'facebook',
         isAuthenticated: false,
         message: 'Email is required but missing from Facebook response',
       });
+      return;
     }
 
-    // Step 3: Normalize profile via hook
+    // 3. Normalize profile via hook
     const decodedProfile: I_Profile = {
       id: fbProfile.id,
       name: fbProfile.name,
@@ -104,51 +111,36 @@ export const facebookAuth: RequestHandler = async (req, res) => {
       };
     }
 
-    // Step 4: Fetch/create user
+    // 4. Get or create user
     const getUser = getUserHandler();
     let user = await getUser(userData);
 
     if (!user || typeof user !== 'object') {
-      return res.status(500).json({
+       res.status(500).json({
         provider: 'facebook',
         isAuthenticated: false,
         message: 'User creation or fetch failed',
       });
+      return;
     }
 
-    // Step 5: Optional transform
+    // 5. Optional transform
     user = await runTransformUserHook(user);
 
-    // Step 6: Issue JWT token
+    // 6. Generate token
     const appToken = generateToken({
       name: user.name || userData.name,
       email: user.email || userData.email,
       avatar: user.avatar || userData.avatar,
     });
 
-    // Step 7: Call hooks
-    await runOAuthSuccessHook({
-      user,
-      provider: 'facebook',
-      accessToken: appToken,
-      rawProfile: decodedProfile,
-    });
+    // 7. Run hooks
+    await runOAuthSuccessHook({ user, provider: 'facebook', accessToken: appToken, rawProfile: decodedProfile });
+    await runTokenIssuedHook({ user, provider: 'facebook', accessToken: appToken, rawProfile: decodedProfile });
+    await runLoginSuccessHook({ user, provider: 'facebook', accessToken: appToken });
 
-    await runTokenIssuedHook({
-      user,
-      provider: 'facebook',
-      accessToken: appToken,
-      rawProfile: decodedProfile,
-    });
-
-    await runLoginSuccessHook({
-      user,
-      provider: 'facebook',
-      accessToken: appToken,
-    });
-
-    // Step 8: Final response
-    return res.status(200).json({
+    // 8. Final response
+    res.status(200).json({
       isAuthenticated: true,
       provider: 'facebook',
       accessToken: appToken,
@@ -157,20 +149,10 @@ export const facebookAuth: RequestHandler = async (req, res) => {
       message: 'Login successful. Happy shopping!',
     });
   } catch (error) {
-    await runOAuthErrorHook({
-      provider: 'facebook',
-      error,
-      code,
-      requestBody: req.body,
-    });
+    await runOAuthErrorHook({ provider: 'facebook', error, code, requestBody: req.body });
+    await runLoginErrorHook({ provider: 'facebook', error, requestBody: req.body });
 
-    await runLoginErrorHook({
-      provider: 'facebook',
-      error,
-      requestBody: req.body,
-    });
-
-    return res.status(500).json({
+    res.status(500).json({
       provider: 'facebook',
       isAuthenticated: false,
       message: 'Failed to login using Facebook',
