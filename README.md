@@ -3,6 +3,25 @@
 # @inertiapixel/nodejs-auth
 **InertiaPixel nodejs-auth** is authentication system for Node.js and Express. Supports credentials and extensible social login, JWT token management, and lifecycle hooks — designed to integrate with nextjs-auth for full-stack MERN apps.
 
+![npm](https://img.shields.io/npm/v/@inertiapixel/nodejs-auth)
+![MIT License](https://img.shields.io/npm/l/@inertiapixel/nodejs-auth)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+
+---
+
+## Table of Contents
+
+- [Why This Exists](#why-this-exists)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Hooks Supported (Optional)](#hooks-supported-optional)
+- [Bring Your Own Database](#bring-your-own-database)
+- [Frontend Package Information](#frontend-package-information)
+- [License](#license)
+- [Related Projects](#related-projects)
+
 ---
 
 ## Why This Exists
@@ -11,11 +30,11 @@ While building a MERN stack project, I couldn't find a well-structured package t
 
 So I decided to create a pair of authentication packages under the inertiapixel scope—one for the frontend and one for the backend—designed to work seamlessly together. If you're looking for a complete authentication solution for your MERN stack project, these paired packages are for you.
 
-
+```md
 🔗 Use `@inertiapixel/nextjs-auth` on the frontend
 
 🔗 Use `@inertiapixel/nodejs-auth` on the backend
-
+```
 ---
 
 ## Features
@@ -23,14 +42,14 @@ So I decided to create a pair of authentication packages under the inertiapixel 
 - Credential-based login (email & password)
 - Plug-and-play support for multiple OAuth providers (Google, Facebook, LinkedIn, etc.)
 - JWT-based session handling
-- Hook system to extend behavior (logging, analytics, audit)
+- Hook system to extend behavior (logging, analytics, audit, etc.)
 - Token blacklisting (secure logout)
 - Works perfectly with `@inertiapixel/nextjs-auth` frontend package
 - Bring your own database (no DB coupling)
 
 ---
 
-## Installation - NPM Package
+## Installation
 
 [![npm version](https://img.shields.io/npm/v/@inertiapixel/nodejs-auth)](https://www.npmjs.com/package/@inertiapixel/nodejs-auth)
 
@@ -40,7 +59,32 @@ npm install @inertiapixel/nodejs-auth
 
 ---
 
+## Environment Variables
+
+Make sure to define these in your `.env` file:
+
+```env
+JWT_SECRET=your_secret_key
+CLIENT_BASE_URL=http://localhost:3000
+
+GOOGLE_CLIENT_ID=xxx
+GOOGLE_CLIENT_SECRET=xxx
+GOOGLE_REDIRECT_URI=http://localhost:4000/auth/google
+
+FACEBOOK_CLIENT_ID=xxx
+FACEBOOK_CLIENT_SECRET=xxx
+FACEBOOK_REDIRECT_URI=http://localhost:4000/auth/facebook
+
+LINKEDIN_CLIENT_ID=xxx
+LINKEDIN_CLIENT_SECRET=xxx
+LINKEDIN_REDIRECT_URI=http://localhost:4000/auth/linkedin
+```
+
+---
+
 ## Quick Start
+
+⚠️ Assumes you're using Express and Mongoose
 
 ```ts
 // server.ts or index.ts
@@ -52,20 +96,20 @@ import inertiaAuth, {
   type I_SocialUser,
   type I_AuthHooks,
   type I_UserObject,
-  I_LoginSuccess,
-  I_LoginError,
-  I_OAuthError,
-  I_OAuthSuccess,
-  I_TokenError,
-  I_TokenIssued,
+  type I_LoginSuccess,
+  type I_LoginError,
+  type I_OAuthError,
+  type I_OAuthSuccess,
+  type I_TokenError,
+  type I_TokenIssued,
 
-  I_Logout,
-  I_TokenBlacklisted,
-  I_TokenRefresh,
-  I_SessionTimeout,
-  I_MapProfileToUser,
+  type I_Logout,
+  type I_TokenBlacklisted,
+  type I_TokenRefresh,
+  type I_SessionTimeout,
+  type I_MapProfileToUser,
 
-} from './pkj/src';
+} from '@inertiapixel/nodejs-auth';
 
 // Inject your Mongoose User model via app.locals
 import User from './models/User'; // Your actual Mongoose model (adjust path)
@@ -314,4 +358,4 @@ MIT © [inertiapixel](https://github.com/inertiapixel)
 - [`@inertiapixel/react-icons`](https://github.com/inertiapixel/react-icons) — React icons set
 
 
-**Crafted in India by [InertiaPixel](https://www.inertiapixel.com/)**
+**Crafted in India by [InertiaPixel](https://www.inertiapixel.com/) 🇮🇳**
