@@ -1,6 +1,6 @@
 {
   "name": "@inertiapixel/nodejs-auth",
-  "version": "1.1.1",
+  "version": "1.1.0",
   "description": "Authentication system for Node.js and Express. Supports credentials and social login, JWT token management, and lifecycle hooks — designed to integrate with nextjs-auth for full-stack MERN apps.",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -26,16 +26,18 @@
     "test": "echo \"Add unit tests here\""
   },
   "keywords": [
-    "node",
-    "mongoose",
-    "cart",
-    "e-commerce",
-    "shopping-cart",
-    "nodejs",
-    "cart-management",
-    "node mongo cart management"
+    "nodejs auth",
+    "node auth",
+    "nodejs auth package",
+    "mongoose auth",
+    "node mongo auth package",
+    "node social login"
   ],
-  "author": "Md Asif <mdasiff007@gmail.com>",
+  "author": {
+    "name": "Md Asif",
+    "email": "mdasiff007@gmail.com",
+    "url": "https://github.com/mdasiff007"
+  },
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^9.29.0",
@@ -55,5 +57,13 @@
   "peerDependencies": {
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inertiapixel/nodejs-auth.git"
+  },
+  "homepage": "https://github.com/inertiapixel/nodejs-auth#readme",
+  "bugs": {
+    "url": "https://github.com/inertiapixel/nodejs-auth/issues"
+  },
 }
