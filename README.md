@@ -16,6 +16,7 @@
 - [Installation](#installation)
 - [Environment Variables](#environment-variables)
 - [Quick Start](#quick-start)
+- [Response](#response)
 - [Hooks Supported (Optional)](#hooks-supported-optional)
 - [Bring Your Own Database](#bring-your-own-database)
 - [Frontend Package Information](#frontend-package-information)
@@ -278,7 +279,25 @@ app.get('/me', auth.middleware.authenticate, (req, res) => {
 });
 
 ```
+---
 
+## Response
+```
+
+//Success
+{
+    "provider": "credentials", //or social
+    "isAuthenticated": true,
+    "accessToken": "JWT_TOKEN",
+    "message": "Login successful. Happy shopping!"
+}
+
+//Fail
+{
+    "isAuthenticated": false,
+    "message": "Invalid credentials"
+}
+```
 ---
 
 ## Hooks Supported (Optional)
