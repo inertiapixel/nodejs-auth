@@ -60,9 +60,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const accessToken = generateToken({
-      first_name: user.first_name,
-      last_name: user.last_name,
-      name: user.first_name + ' ' + user.last_name,
+      name: user.name,
       email: user.email,
       avatar: user.avatar
     });
@@ -71,7 +69,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       provider: 'credentials',
       accessToken,
       user: {
-        name: user.first_name + ' ' + user.last_name,
+        name: user.name,
         email: user.email,
         avatar: user.avatar
       }
