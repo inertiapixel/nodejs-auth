@@ -1,11 +1,20 @@
-![InertiaPixel](https://www.inertiapixel.com/images/logo-min.svg)
+<p align="center">
+  <br/>
+  <a href="https://www.inertiapixel.com/" target="_blank"><img width="150px" src="https://www.inertiapixel.com/images/logo-min.svg" /></a>
+  <h3 align="center">@inertiapixel/nodejs-auth</h3>
+  <p align="center">Node.js + Next.js Auth for MERN</p>
+  <p align="center">Open Source. Full Stack</p>
+</p>
 
-# @inertiapixel/nodejs-auth
-**InertiaPixel nodejs-auth** is authentication system for Node.js and Express. Supports credentials and extensible social login, JWT token management, and lifecycle hooks — designed to integrate with nextjs-auth for full-stack MERN apps.
+**InertiaPixel nodejs-auth** is an open-source authentication system for Node.js and Express. Supports credentials and extensible social login, JWT token management, and lifecycle hooks — designed to integrate with nextjs-auth for full-stack MERN apps.
+
 
 ![npm](https://img.shields.io/npm/v/@inertiapixel/nodejs-auth)
 ![MIT License](https://img.shields.io/npm/l/@inertiapixel/nodejs-auth)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+![Open Source](https://img.shields.io/badge/Open%20Source-✔️-blue)
+![TypeScript](https://img.shields.io/badge/Built%20with-TypeScript-3178c6?logo=typescript)
+
 
 ---
 
