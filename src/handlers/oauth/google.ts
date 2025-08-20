@@ -1,7 +1,16 @@
+// handlers/google.ts
 import { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 
-import { generateToken } from '../../utils/token';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  tryDecode,
+  generateJti,
+  TokenPayload,
+} from '../../utils/token';
+import { refreshStore } from '../../utils/refreshStore';
+
 import { getSocialConfig } from '../../config/social';
 import { getClientBaseUrl } from '../../config/client';
 import { getUserHandler } from '../../config/user';
@@ -13,7 +22,7 @@ import {
   runTokenIssuedHook,
   runLoginErrorHook,
   runMapProfileToUserHook,
-  runTransformUserHook
+  runTransformUserHook,
 } from '../../hooks';
 import { I_Profile } from '../../types/auth';
 
@@ -25,6 +34,7 @@ interface GoogleIdTokenPayload {
   picture: string;
   sub: string;
 }
+
 
 export const googleAuth: RequestHandler = async (req, res) => {
   const { code } = req.body;
@@ -71,16 +81,15 @@ export const googleAuth: RequestHandler = async (req, res) => {
 
     const tokenData = await tokenRes.json();
     if (!tokenData || typeof tokenData !== 'object' || !('id_token' in tokenData)) {
-       res.status(400).json({
+      res.status(400).json({
         provider: 'google',
         isAuthenticated: false,
         message: 'ID token not found in response',
       });
       return;
     }
-    
-    const { id_token } = tokenData as { id_token: string };
 
+    const { id_token } = tokenData as { id_token: string };
     const decoded = jwt.decode(id_token) as GoogleIdTokenPayload | null;
 
     if (!decoded?.email) {
@@ -119,27 +128,61 @@ export const googleAuth: RequestHandler = async (req, res) => {
     // 4. Transform if needed
     user = await runTransformUserHook(user);
 
-    // 5. Issue JWT
-    const accessToken = generateToken({
+    // 5. Issue JWT pair (access + refresh)
+    const basePayload: TokenPayload = {
+      sub: String(user._id ?? decoded.sub),
       name: user.name || userData.name,
       email: user.email || userData.email,
       avatar: user.avatar || userData.avatar,
+    };
+
+    const accessToken = generateAccessToken(basePayload);
+
+    // refresh with jti
+    const jti = generateJti();
+    const refreshToken = generateRefreshToken({ ...basePayload, jti });
+
+    // store refresh metadata
+    const parsed = tryDecode(refreshToken);
+    const exp =
+      typeof parsed?.exp === 'number'
+        ? parsed.exp
+        : Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
+
+    await refreshStore().add({
+      jti,
+      userId: basePayload.sub,
+      expiresAt: exp,
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
     });
 
-    // 6. Trigger hooks
-    await runOAuthSuccessHook({ user, provider: 'google', accessToken, rawProfile: decoded });
-    await runTokenIssuedHook({ user, provider: 'google', accessToken, rawProfile: decoded });
+    // set HttpOnly cookie
+    res.cookie('refreshToken', refreshToken);
 
-    // 7. Return
+    // 6. Hooks
+    await runOAuthSuccessHook({
+      user,
+      provider: 'google',
+      accessToken,
+      rawProfile: decoded,
+    });
+    await runTokenIssuedHook({
+      user,
+      provider: 'google',
+      accessToken,
+      rawProfile: decoded,
+    });
+
+    // 7. Response
     res.status(200).json({
       isAuthenticated: true,
       provider: 'google',
       accessToken,
       user,
-      provoider_log: decoded,
+      provider_log: decoded,
       message: 'Login successful. Happy shopping!',
     });
-    return;
   } catch (error) {
     await runOAuthErrorHook({
       provider: 'google',
@@ -149,7 +192,7 @@ export const googleAuth: RequestHandler = async (req, res) => {
     });
 
     await runLoginErrorHook({
-      provider: 'credentials',
+      provider: 'google',
       error,
       requestBody: req.body,
     });
@@ -160,6 +203,5 @@ export const googleAuth: RequestHandler = async (req, res) => {
       message: 'Failed to login using Google',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    return;
   }
 };

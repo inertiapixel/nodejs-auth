@@ -1,8 +1,9 @@
+// index.ts
 import { login, logout, refreshToken } from './handlers/auth';
 import { authenticate } from './middleware/authenticate';
 import { getSocialAuthHandlers } from './handlers/oauth';
 
-import { setJwtSecret } from './utils/token';
+import { setJwtSecrets } from './utils/token';
 import { setClientBaseUrl } from './config/client';
 import { setSocialConfig } from './config/social';
 import { setUserHandler } from './config/user';
@@ -33,7 +34,7 @@ import type { RequestHandler } from 'express';
 type Handler = RequestHandler;
 
 interface AuthConfig extends SocialConfig {
-  jwtSecret: string;
+  jwtSecrets: { access: string; refresh: string }; // updated
   clientBaseUrl: string;
   getUserHandler: (user: I_SocialUser) => Promise<I_UserObject>;
   hooks?: I_AuthHooks;
@@ -49,13 +50,14 @@ interface InertiaAuthReturn {
     linkedin?: Handler;
   };
   middleware: {
-    authenticate: Handler;
+    // authenticate is a factory function, not a plain handler
+    authenticate: (options?: { autoRefresh?: boolean }) => Handler;
   };
 }
 
 const inertiaAuth = (config: AuthConfig): InertiaAuthReturn => {
   const {
-    jwtSecret,
+    jwtSecrets,
     clientBaseUrl,
     getUserHandler: userHandler,
     hooks,
@@ -64,11 +66,20 @@ const inertiaAuth = (config: AuthConfig): InertiaAuthReturn => {
     linkedin
   } = config;
 
-  if (!jwtSecret) throw new Error('jwtSecret is required');
+  if (!jwtSecrets?.access) {
+    throw new Error('Access JWT secret is required');
+  }
+  if (!jwtSecrets?.refresh) {
+    throw new Error('Refresh JWT secret is required');
+  }
+  
   if (!clientBaseUrl) throw new Error('clientBaseUrl is required');
-  if (typeof userHandler !== 'function') throw new Error('getUserHandler function is required');
+  if (typeof userHandler !== 'function') {
+    throw new Error('getUserHandler function is required');
+  }
 
-  setJwtSecret(jwtSecret);
+  // set access + refresh secrets
+  setJwtSecrets(jwtSecrets);
   setClientBaseUrl(clientBaseUrl);
   setUserHandler(userHandler);
   setSocialConfig({ google, facebook, linkedin });
@@ -91,7 +102,7 @@ const inertiaAuth = (config: AuthConfig): InertiaAuthReturn => {
       linkedin: linkedinHandler
     },
     middleware: {
-      authenticate
+      authenticate // still works as (options?) => Handler
     }
   };
 };
