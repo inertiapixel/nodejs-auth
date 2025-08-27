@@ -8,6 +8,9 @@
 
 **InertiaPixel nodejs-auth** is an open-source authentication system for Node.js and Express. Supports credentials and extensible social login, JWT token management, and lifecycle hooks — designed to integrate with nextjs-auth for full-stack MERN apps.
 
+⚡ Secure by default: Tokens are stored in HttpOnly cookies.
+
+No `localStorage` or `sessionStorage` needed, making it XSS-safe.
 
 ![npm](https://img.shields.io/npm/v/@inertiapixel/nodejs-auth)
 ![MIT License](https://img.shields.io/npm/l/@inertiapixel/nodejs-auth)
@@ -49,6 +52,7 @@ So I decided to create a pair of authentication packages under the inertiapixel 
 
 ## Features
 
+- Secure by Default (HttpOnly cookies)
 - Credential-based login (email & password)
 - Plug-and-play support for multiple OAuth providers (Google, Facebook, LinkedIn, etc.)
 - JWT-based session handling
@@ -74,8 +78,12 @@ npm install @inertiapixel/nodejs-auth
 Make sure to define these in your `.env` file:
 
 ```env
-JWT_SECRET=your_secret_key
+NODE_ENV=local/production
 CLIENT_BASE_URL=http://localhost:3000
+
+#JWT SECRETS
+JWT_ACCESS_SECRET=mysupersecret_access
+JWT_REFRESH_SECRET=mysupersecret_refresh
 
 GOOGLE_CLIENT_ID=xxx
 GOOGLE_CLIENT_SECRET=xxx
@@ -117,7 +125,7 @@ import inertiaAuth, {
   type I_TokenBlacklisted,
   type I_TokenRefresh,
   type I_SessionTimeout,
-  type I_MapProfileToUser,
+  type I_MapProfileToUser
 
 } from '@inertiapixel/nodejs-auth';
 
@@ -239,7 +247,10 @@ const hooks: I_AuthHooks = {
 // Initialize auth package
 const auth = inertiaAuth({
   clientBaseUrl: process.env.CLIENT_BASE_URL!,
-  jwtSecret: process.env.JWT_SECRET!,
+  jwtSecrets: {
+    access: process.env.JWT_ACCESS_SECRET!,
+    refresh: process.env.JWT_REFRESH_SECRET!,
+  },
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
