@@ -107,7 +107,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
     const refreshTokenCookie = req.cookies?.refreshToken as string | undefined;
-    console.log('refreshTokenCookie', refreshTokenCookie);
 
     if (refreshTokenCookie) {
       const decoded = tryDecode(refreshTokenCookie);
@@ -119,48 +118,20 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       // Run hooks
       if (decoded) {
         await runLogoutHook({ user: decoded, token: refreshTokenCookie });
-        await runTokenBlacklistedHook({ user: decoded, token: refreshTokenCookie, reason: 'Logout' });
+        await runTokenBlacklistedHook({ user: decoded, token: refreshTokenCookie, reason: "Logout" });
       }
+
+      res.status(200).json({ message: "Logout successful", hadSession: true });
+      return;
     }
 
-    res.status(200).json({ message: 'Logout successful' });
+    // No cookie, no active session
+    res.status(200).json({ message: "No active session", hadSession: false });
+    return;
   } catch (err) {
-    res.status(500).json({ message: 'Logout failed', error: (err as Error).message });
+    res.status(500).json({ message: "Logout failed", error: (err as Error).message });
+    return;
   }
-};
-
-
-export const logout1 = async (req: Request, res: Response): Promise<void> => {
-  let accessToken: string | undefined;
-
-  // Try to get from Authorization header (optional)
-  console.log('logout===', req.headers.authorization);
-
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    accessToken = authHeader.split(' ')[1];
-    // Blacklist the access token if provided
-    addToBlacklist(accessToken);
-  }
-
-  // Always check refresh cookie
-  const refreshTokenCookie = req.cookies?.refreshToken as string | undefined;
-  if (refreshTokenCookie) {
-    const rDecoded = tryDecode(refreshTokenCookie);
-    if (rDecoded?.jti) {
-      await refreshStore().revoke(rDecoded.jti);
-    }
-    clearRefreshCookie(res);
-  }
-
-  // Run logout hooks if we can decode user info
-  const user = accessToken ? tryDecode(accessToken) : (refreshTokenCookie ? tryDecode(refreshTokenCookie) : null);
-  if (user) {
-    runLogoutHook({ user, token: accessToken ?? '' });
-    runTokenBlacklistedHook({ user, token: accessToken ?? '', reason: 'Logout' });
-  }
-
-  res.status(200).json({ message: 'Logout successful' });
 };
 
 
