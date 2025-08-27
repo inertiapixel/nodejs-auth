@@ -2,7 +2,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import {
-  addToBlacklist,
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
@@ -22,6 +21,7 @@ import {
   runTokenIssuedHook,
   runTokenRefreshHook
 } from '../hooks';
+import { getCookie } from '../utils/cookie';
 
 // import { I_UserObject } from '../types/auth';
 
@@ -106,7 +106,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
-    const refreshTokenCookie = req.cookies?.refreshToken as string | undefined;
+    const refreshTokenCookie = getCookie(req, "refreshToken");
 
     if (refreshTokenCookie) {
       const decoded = tryDecode(refreshTokenCookie);
@@ -134,21 +134,20 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-
 export const refreshToken = async (req: Request, res: Response) => {
-  console.log('req.cookies', req.cookies);
-  const refreshToken = req.cookies?.refreshToken as string | undefined;
+  const refreshToken = getCookie(req, "refreshToken");
 
   if (!refreshToken) {
-    res.status(400).json({ message: 'Refresh token is missing' });
+    res.status(400).json({ message: "Refresh token is missing" });
     return;
   }
 
   try {
     const decoded = verifyRefreshToken(refreshToken);
+
     // Check store (token must be active)
     if (!decoded.jti || !(await refreshStore().isActive(decoded.jti))) {
-      res.status(401).json({ message: 'Refresh token is revoked or invalid' });
+      res.status(401).json({ message: "Refresh token is revoked or invalid" });
       return;
     }
 
@@ -161,39 +160,53 @@ export const refreshToken = async (req: Request, res: Response) => {
 
     // Rotate: revoke old jti, issue new jti and refresh token
     const newJti = generateJti();
-    const newRefreshToken = generateRefreshToken({ ...basePayload, jti: newJti });
+    const newRefreshToken = generateRefreshToken({
+      ...basePayload,
+      jti: newJti,
+    });
 
-    const newDecoded = JSON.parse(Buffer.from(newRefreshToken.split('.')[1], 'base64').toString()) as TokenPayload;
-    const newExp = typeof newDecoded.exp === 'number' ? newDecoded.exp : Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
+    // decode new refresh token exp
+    const newDecoded = JSON.parse(
+      Buffer.from(newRefreshToken.split(".")[1], "base64").toString()
+    ) as TokenPayload;
+
+    const newExp =
+      typeof newDecoded.exp === "number"
+        ? newDecoded.exp
+        : Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
 
     await refreshStore().rotate(decoded.jti!, {
       jti: newJti,
       userId: basePayload.sub,
       expiresAt: newExp,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
       ip: req.ip,
     });
 
-    //Set rotated refresh cookie via util
+    // Set rotated refresh cookie via util
     setRefreshCookie(res, newRefreshToken);
 
     // Issue new access
     const newAccessToken = generateAccessToken(basePayload);
 
     await runTokenRefreshHook({
-      user: { name: basePayload.name, email: basePayload.email, avatar: basePayload.avatar },
+      user: {
+        name: basePayload.name,
+        email: basePayload.email,
+        avatar: basePayload.avatar,
+      },
       oldToken: refreshToken,
       newToken: newAccessToken,
     });
 
     res.status(200).json({
       accessToken: newAccessToken,
-      message: 'Token refreshed successfully',
+      message: "Token refreshed successfully",
     });
   } catch (error) {
     res.status(401).json({
-      message: 'Invalid or expired refresh token',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: "Invalid or expired refresh token",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
