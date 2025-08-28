@@ -1,4 +1,5 @@
 // Configuration for a single social provider
+import type { Request, Response } from "express";
 export interface SocialProviderConfig {
   clientId: string;
   clientSecret: string;
@@ -35,6 +36,8 @@ export interface I_LoginSuccess {
   user: I_UserObject;
   provider: string;
   accessToken: string;
+  req?: Request;
+  res?: Response;
 }
 
 export interface I_OAuthSuccess {

@@ -85,7 +85,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       user: { name: user.name, email: user.email, avatar: user.avatar }
     });
 
-    await runLoginSuccessHook({ user, provider: 'credentials', accessToken });
+    await runLoginSuccessHook({ user, provider: 'credentials', accessToken, req, res });
 
     res.status(200).json({
       provider: 'credentials',
