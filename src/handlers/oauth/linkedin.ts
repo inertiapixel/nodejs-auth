@@ -186,6 +186,8 @@ export const linkedinAuth: RequestHandler = async (req, res) => {
     });
 
     await runLoginSuccessHook({
+      req,
+      res,
       user,
       provider: 'linkedin',
       accessToken,

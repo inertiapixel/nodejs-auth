@@ -188,6 +188,8 @@ export const facebookAuth: RequestHandler = async (req, res) => {
       rawProfile: decodedProfile,
     });
     await runLoginSuccessHook({
+      req,
+      res,
       user,
       provider: 'facebook',
       accessToken,

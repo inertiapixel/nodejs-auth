@@ -117,7 +117,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 
       // Run hooks
       if (decoded) {
-        await runLogoutHook({ user: decoded, token: refreshTokenCookie });
+        await runLogoutHook({ req, res, user: decoded, token: refreshTokenCookie });
         await runTokenBlacklistedHook({ user: decoded, token: refreshTokenCookie, reason: "Logout" });
       }
 

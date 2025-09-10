@@ -1,5 +1,7 @@
 // Configuration for a single social provider
 import type { Request, Response } from "express";
+import { Types } from "mongoose";
+
 export interface SocialProviderConfig {
   clientId: string;
   clientSecret: string;
@@ -23,6 +25,7 @@ export interface I_SocialUser {
 }
 
 export interface I_UserObject {
+  _id?: string | Types.ObjectId;
   name: string;
   email: string;
   avatar?: string;
@@ -33,11 +36,11 @@ export interface I_UserObject {
 // Developer hook context for a successful OAuth login
 
 export interface I_LoginSuccess {
+  req: Request;
+  res: Response;
   user: I_UserObject;
   provider: string;
   accessToken: string;
-  req?: Request;
-  res?: Response;
 }
 
 export interface I_OAuthSuccess {
@@ -74,6 +77,8 @@ export interface I_TokenError {
 }
 
 export interface I_Logout {
+  req: Request;
+  res: Response;
   user: I_UserObject;
   token: string;
 }
