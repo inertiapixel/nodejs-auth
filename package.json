@@ -1,6 +1,6 @@
 {
   "name": "@inertiapixel/nodejs-auth",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Authentication system for Node.js and Express. Supports credentials and social login, JWT token management, and lifecycle hooks — designed to integrate with nextjs-auth for full-stack MERN apps.",
   "main": "dist/index.js",
   "module": "dist/index.js",
